@@ -1,5 +1,3 @@
-import { subDays } from "date-fns";
-
 import { buildOwnershipAnalysis } from "@/src/lib/analysis/ownership";
 import { getServerEnv } from "@/src/lib/env";
 import { fetchRecentCommitActivity, fetchRepositoryTree } from "@/src/integrations/github/service";
@@ -7,7 +5,7 @@ import { getConnectedGitHubAccountForUser } from "@/src/services/auth/service";
 import { classifyAnalysisError } from "@/src/services/analysis/error-service";
 import { filterRelevantCodePaths, isRelevantCodeFile } from "@/src/services/analysis/file-filter-service";
 import { acquireRepositoryProcessingLock, releaseRepositoryProcessingLock, renewRepositoryProcessingLock } from "@/src/services/analysis/lock-service";
-import { selectAnalysisMode } from "@/src/services/analysis/mode-service";
+import { FULL_HISTORY_WINDOW_START, selectAnalysisMode } from "@/src/services/analysis/mode-service";
 import {
   archiveOwnershipAnalysisJob,
   deleteOwnershipAnalysisJob,
@@ -20,8 +18,7 @@ import { createServiceRoleSupabaseClient } from "@/src/services/_shared/supabase
 import { getRepositoryForUser } from "@/src/services/repositories/service";
 import type { Database } from "@/src/types/database";
 
-const DEFAULT_COMMIT_LIMIT = 500;
-const DEFAULT_WINDOW_DAYS = 90;
+const DEFAULT_COMMIT_LIMIT = 1_000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 
 type AnalysisRunRow = Database["public"]["Tables"]["analysis_runs"]["Row"];
@@ -231,8 +228,8 @@ async function runOwnershipAnalysis(run: AnalysisRunRow) {
   });
 
   const filePaths = filterRelevantCodePaths(repositoryTreePaths);
-  const analysisModeSelection = selectAnalysisMode(filePaths.length);
-  const commitWindowStart = subDays(new Date(), analysisModeSelection.windowDays).toISOString();
+  const analysisModeSelection = selectAnalysisMode();
+  const commitWindowStart = analysisModeSelection.commitWindowStart;
   const commitWindowEnd = nowIso();
 
   await updateRun(run.id, {
@@ -252,7 +249,7 @@ async function runOwnershipAnalysis(run: AnalysisRunRow) {
     repo: repository.name,
     defaultBranch: repository.default_branch,
     commitLimit: analysisModeSelection.commitLimit,
-    windowDays: analysisModeSelection.windowDays,
+    since: analysisModeSelection.commitWindowStart,
     shouldIncludeFile: isRelevantCodeFile,
     onProgress: async (processedCount, totalCount) => {
       if (!shouldPersistCommitProgress(processedCount, totalCount)) {
@@ -295,7 +292,7 @@ async function runOwnershipAnalysis(run: AnalysisRunRow) {
   const snapshotRow = await persistAnalysisSnapshot({
     run,
     analysisMode: analysisModeSelection.analysisMode,
-    degradedReason: analysisModeSelection.degradedReason,
+    degradedReason: null,
     treeFileCount: filePaths.length,
     commitCountProcessed: commitActivity.activities.length,
     analysis,
@@ -474,7 +471,7 @@ export async function enqueueAnalysisRunForRepository(input: {
   }
 
   const supabase = createServiceRoleSupabaseClient();
-  const commitWindowStart = subDays(new Date(), DEFAULT_WINDOW_DAYS).toISOString();
+  const commitWindowStart = FULL_HISTORY_WINDOW_START;
   const commitWindowEnd = nowIso();
   const { data, error } = await supabase
     .from("analysis_runs")

@@ -1,5 +1,3 @@
-import { subDays } from "date-fns";
-
 import { createGitHubClient } from "@/src/integrations/github/client";
 import { mapWithConcurrency } from "@/src/lib/async";
 import { getServerEnv } from "@/src/lib/env";
@@ -11,7 +9,6 @@ import type {
 } from "@/src/integrations/github/types";
 
 const DEFAULT_COMMIT_LIMIT = 500;
-const DEFAULT_WINDOW_DAYS = 90;
 const RETRYABLE_STATUSES = new Set([408, 409, 429, 500, 502, 503, 504]);
 
 function normalizeAuthor({
@@ -109,20 +106,19 @@ export async function fetchRecentCommitActivity(input: {
   repo: string;
   defaultBranch: string;
   commitLimit?: number;
-  windowDays?: number;
+  since?: string;
   shouldIncludeFile?: (path: string) => boolean;
   onProgress?: (processedCount: number, totalCount: number) => Promise<void> | void;
 }): Promise<GitHubCommitActivityResult> {
   const octokit = createGitHubClient(input.accessToken);
   const commitLimit = input.commitLimit ?? DEFAULT_COMMIT_LIMIT;
-  const since = subDays(new Date(), input.windowDays ?? DEFAULT_WINDOW_DAYS).toISOString();
   const lightweightCommits: { sha: string }[] = [];
 
   for await (const response of octokit.paginate.iterator(octokit.rest.repos.listCommits, {
     owner: input.owner,
     repo: input.repo,
     sha: input.defaultBranch,
-    since,
+    since: input.since,
     per_page: 100,
   })) {
     lightweightCommits.push(...response.data);

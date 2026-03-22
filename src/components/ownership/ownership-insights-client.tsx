@@ -292,7 +292,7 @@ export function OwnershipInsightsClient({ repositoryId }: { repositoryId: string
             <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400 mb-3">Ownership insights</p>
             <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-white mb-4">{data.repository.fullName}</h1>
             <p className="max-w-3xl text-sm leading-relaxed text-zinc-400 font-mono">
-              Explore ownership across folders and files, drill deeper only when you need it, and rerun the analysis whenever the cache gets stale.
+              Explore ownership across folders and files using the latest 1000 commits on the default branch, and rerun the analysis whenever the cache gets stale.
             </p>
           </div>
 
@@ -337,7 +337,10 @@ export function OwnershipInsightsClient({ repositoryId }: { repositoryId: string
 
         <div className="mt-6 flex flex-wrap gap-2">
           <div className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[9px] font-mono tracking-widest text-zinc-400 uppercase">
-            Mode <span className="text-white ml-2">{data.analysisMode ?? "pending"}</span>
+            Analysis mode <span className="text-white ml-2">full</span>
+          </div>
+          <div className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[9px] font-mono tracking-widest text-zinc-400 uppercase">
+            Commit cap <span className="text-white ml-2">1000</span>
           </div>
           <div className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[9px] font-mono tracking-widest text-zinc-400 uppercase">
             Tree files <span className="text-white ml-2">{data.treeFileCount ?? 0}</span>
@@ -345,11 +348,6 @@ export function OwnershipInsightsClient({ repositoryId }: { repositoryId: string
           <div className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-[9px] font-mono tracking-widest text-zinc-400 uppercase">
             Commits parsed <span className="text-white ml-2">{data.commitCountProcessed ?? 0}</span>
           </div>
-          {data.degradedReason ? (
-            <div className="rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-[9px] font-mono tracking-widest text-amber-500 uppercase">
-              {data.degradedReason}
-            </div>
-          ) : null}
         </div>
 
         {data.summary.activeRun ? (

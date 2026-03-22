@@ -1,42 +1,18 @@
-import type { AnalysisMode } from "@/src/types/domain";
-
-const SMALL_REPOSITORY_FILE_THRESHOLD = 3_000;
-const LARGE_REPOSITORY_FILE_THRESHOLD = 12_000;
+export const MAX_COMMIT_FETCH_LIMIT = 1_000;
+export const FULL_HISTORY_WINDOW_START = "1970-01-01T00:00:00.000Z";
 
 export interface AnalysisModeSelection {
-  analysisMode: AnalysisMode;
+  analysisMode: "full";
   commitLimit: number;
-  windowDays: number;
-  collapseDepth: number | null;
-  degradedReason: string | null;
+  commitWindowStart: string;
+  collapseDepth: null;
 }
 
-export function selectAnalysisMode(fileCount: number): AnalysisModeSelection {
-  if (fileCount > LARGE_REPOSITORY_FILE_THRESHOLD) {
-    return {
-      analysisMode: "degraded",
-      commitLimit: 300,
-      windowDays: 45,
-      collapseDepth: 1,
-      degradedReason: "Repository exceeded the large-repo threshold, so ownership was collapsed to shallow module depth.",
-    };
-  }
-
-  if (fileCount > SMALL_REPOSITORY_FILE_THRESHOLD) {
-    return {
-      analysisMode: "reduced",
-      commitLimit: 600,
-      windowDays: 75,
-      collapseDepth: null,
-      degradedReason: null,
-    };
-  }
-
+export function selectAnalysisMode(): AnalysisModeSelection {
   return {
     analysisMode: "full",
-    commitLimit: 1_000,
-    windowDays: 120,
+    commitLimit: MAX_COMMIT_FETCH_LIMIT,
+    commitWindowStart: FULL_HISTORY_WINDOW_START,
     collapseDepth: null,
-    degradedReason: null,
   };
 }
