@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useState } from "react";
 
 import { formatDistanceToNow } from "date-fns";
-import { ChevronRight, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ChevronRight, ShieldAlert, ShieldCheck } from "lucide-react";
 
 import type { RepositorySummary } from "@/src/types/domain";
 
@@ -64,7 +64,6 @@ export function RepositoryListClient() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshTick, setRefreshTick] = useState(0);
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
@@ -103,7 +102,7 @@ export function RepositoryListClient() {
     return () => {
       cancelled = true;
     };
-  }, [refreshTick, pagination.page]);
+  }, [pagination.page]);
 
   const filteredRepositories = repositories.filter((repository) =>
     repository.fullName.toLowerCase().includes(deferredQuery.trim().toLowerCase()),
@@ -115,7 +114,7 @@ export function RepositoryListClient() {
         <div>
           <h2 className="text-2xl font-light text-white">Accessible GitHub repositories</h2>
           <p className="mt-2 text-xs font-mono tracking-wider text-zinc-400 uppercase">
-            Analysis is cached by user and repo so the ownership map is ready on the next visit.
+            Select a repository to explore its ownership dynamics and contributors.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -125,14 +124,6 @@ export function RepositoryListClient() {
             placeholder="search page..."
             className="w-full rounded-full border border-white/20 bg-transparent px-5 py-3 text-sm text-white font-mono outline-none transition focus:border-white/50 sm:w-72"
           />
-          <button
-            type="button"
-            onClick={() => setRefreshTick((current) => current + 1)}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-6 py-3 text-[10px] font-mono uppercase tracking-widest text-zinc-300 transition hover:border-white/50 hover:bg-white/5 hover:text-white"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
         </div>
       </div>
 
@@ -143,14 +134,16 @@ export function RepositoryListClient() {
               <RepositorySkeleton key={i} />
             ))}
           </div>
-          <div className="mt-16 flex items-center justify-center gap-6 animate-pulse">
-            <div className="w-28 h-10 bg-white/5 rounded-full border border-white/10" />
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-24 h-3 bg-white/5 rounded" />
-              <div className="w-12 h-2 bg-white/5 rounded" />
+          {repositories.length === 0 && (
+            <div className="mt-16 flex items-center justify-center gap-6 animate-pulse">
+              <div className="w-28 h-10 bg-white/5 rounded-full border border-white/10" />
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-24 h-3 bg-white/5 rounded" />
+                <div className="w-12 h-2 bg-white/5 rounded" />
+              </div>
+              <div className="w-28 h-10 bg-white/5 rounded-full border border-white/10" />
             </div>
-            <div className="w-28 h-10 bg-white/5 rounded-full border border-white/10" />
-          </div>
+          )}
         </>
       ) : error ? (
         <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
@@ -230,11 +223,11 @@ export function RepositoryListClient() {
         </div>
       )}
 
-      {!loading && !error && filteredRepositories.length > 0 && pagination.totalPages > 1 && (
+      {!error && repositories.length > 0 && pagination.totalPages > 1 && (
         <div className="mt-16 flex items-center justify-center gap-6">
           <button
             onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
-            disabled={pagination.page === 1}
+            disabled={loading || pagination.page === 1}
             className="px-6 py-3 border border-white/20 rounded-full font-mono text-[10px] tracking-widest uppercase text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
@@ -245,7 +238,7 @@ export function RepositoryListClient() {
           </div>
           <button
             onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.totalPages, prev.page + 1) }))}
-            disabled={pagination.page === pagination.totalPages}
+            disabled={loading || pagination.page === pagination.totalPages}
             className="px-6 py-3 border border-white/20 rounded-full font-mono text-[10px] tracking-widest uppercase text-white hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next

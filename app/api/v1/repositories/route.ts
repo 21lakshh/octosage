@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireCurrentUser } from "@/src/services/auth/service";
-import { listRepositorySummariesForUser } from "@/src/services/repositories/service";
+import { listRepositorySummariesForUser, syncRepositoriesForUser } from "@/src/services/repositories/service";
 import { repositorySummarySchema } from "@/src/types/schemas";
 
 export async function GET(request: Request) {
@@ -12,8 +12,12 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = parseInt(searchParams.get("limit") || "10", 10);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "9", 10)));
+
+  if (page === 1) {
+    await syncRepositoriesForUser(user.id);
+  }
 
   const paginated = await listRepositorySummariesForUser(user.id, page, limit);
 

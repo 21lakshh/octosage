@@ -131,9 +131,7 @@ export async function syncRepositoriesForUser(userId: string) {
   return repositories;
 }
 
-export async function listRepositorySummariesForUser(userId: string, page = 1, limit = 10) {
-  await syncRepositoriesForUser(userId);
-
+export async function listRepositorySummariesForUser(userId: string, page = 1, limit = 9) {
   const supabase = createServiceRoleSupabaseClient();
   const start = (page - 1) * limit;
   const end = start + limit - 1;

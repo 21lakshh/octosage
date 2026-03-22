@@ -21,9 +21,8 @@ export default function RepositoriesPage() {
             Compute the <span className="italic font-serif text-white/80">ownership graph.</span>
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-zinc-400 font-mono">
-            Synced from GitHub through Octokit, then cached in Supabase by user and
-            repository. Kick off analysis on demand and keep the latest successful snapshot ready for
-            the next visit.
+            Connect your GitHub repositories to map out code ownership. Automatically identify top
+            contributors, highlight knowledge silos, and understand how your team interacts with the codebase.
           </p>
         </section>
 
