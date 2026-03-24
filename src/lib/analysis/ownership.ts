@@ -12,6 +12,10 @@ import type {
 
 const RECENCY_DECAY_DAYS = 45;
 const BUS_FACTOR_THRESHOLD = 0.7;
+const ADDITION_WEIGHT = 1;
+const DELETION_WEIGHT = 0.6;
+const MAX_SURVIVAL_EROSION = 0.35;
+const SURVIVAL_EROSION_SCALE = 500;
 
 export interface OwnershipAnalysisInput {
   repositoryLabel: string;
@@ -44,7 +48,15 @@ type AggregateNode = {
 };
 
 export function computeContributionScore(changedLines: number, ageInDays: number) {
-  return changedLines * Math.exp(-ageInDays / RECENCY_DECAY_DAYS);
+  return Math.log1p(changedLines) * Math.exp(-ageInDays / RECENCY_DECAY_DAYS);
+}
+
+export function computeWeightedChangeLines(additions: number, deletions: number) {
+  return additions * ADDITION_WEIGHT + deletions * DELETION_WEIGHT;
+}
+
+export function computeSurvivalErosion(weightedLines: number) {
+  return Math.min(MAX_SURVIVAL_EROSION, weightedLines / SURVIVAL_EROSION_SCALE);
 }
 
 function toAnalysisPath(path: string) {
@@ -268,6 +280,7 @@ export function buildOwnershipAnalysis(input: OwnershipAnalysisInput): Ownership
   const now = input.now ?? new Date();
   const currentFiles = new Set(input.filePaths.map((path) => toAnalysisPath(path)));
   const aggregates = new Map<string, AggregateNode>();
+  const leafOwnerScores = new Map<string, AggregateNode["ownerScores"]>();
 
   aggregates.set("/", createAggregateNode("/", input.repositoryLabel, "folder"));
 
@@ -277,6 +290,10 @@ export function buildOwnershipAnalysis(input: OwnershipAnalysisInput): Ownership
 
     if (!aggregates.has(analysisPath)) {
       aggregates.set(analysisPath, createAggregateNode(analysisPath, input.repositoryLabel, leafNodeType));
+    }
+
+    if (!leafOwnerScores.has(analysisPath)) {
+      leafOwnerScores.set(analysisPath, new Map());
     }
 
     for (const ancestor of getAncestors(analysisPath)) {
@@ -300,7 +317,11 @@ export function buildOwnershipAnalysis(input: OwnershipAnalysisInput): Ownership
     }
   }
 
-  for (const commit of input.commits) {
+  const commits = [...input.commits].sort(
+    (left, right) => new Date(left.committedAt).getTime() - new Date(right.committedAt).getTime(),
+  );
+
+  for (const commit of commits) {
     const ageInDays = Math.max(differenceInDays(now, new Date(commit.committedAt)), 0);
 
     for (const file of commit.files) {
@@ -312,13 +333,28 @@ export function buildOwnershipAnalysis(input: OwnershipAnalysisInput): Ownership
 
       const analysisPath = collapsePath(path, input.maxDepth);
 
-      const changedLines = file.additions + file.deletions;
+      const weightedLines = computeWeightedChangeLines(file.additions, file.deletions);
 
-      if (changedLines <= 0) {
+      if (weightedLines <= 0) {
         continue;
       }
 
-      const contributionScore = computeContributionScore(changedLines, ageInDays);
+      const contributionScore = computeContributionScore(weightedLines, ageInDays);
+      const erosion = computeSurvivalErosion(weightedLines);
+      const fileOwnerScores = leafOwnerScores.get(analysisPath);
+
+      if (!fileOwnerScores) {
+        continue;
+      }
+
+      for (const [ownerKey, ownerScore] of fileOwnerScores.entries()) {
+        if (ownerKey === commit.author.ownerKey) {
+          continue;
+        }
+
+        ownerScore.rawScore *= 1 - erosion;
+      }
+
       const scoreEntry = {
         ownerKey: commit.author.ownerKey,
         ownerLogin: commit.author.ownerLogin,
@@ -326,20 +362,38 @@ export function buildOwnershipAnalysis(input: OwnershipAnalysisInput): Ownership
         rawScore: contributionScore,
       };
 
-      const fileNode = aggregates.get(analysisPath);
+      upsertOwnerScore(fileOwnerScores, scoreEntry);
+    }
+  }
 
-      if (fileNode) {
-        upsertOwnerScore(fileNode.ownerScores, scoreEntry);
+  for (const [analysisPath, ownerScores] of leafOwnerScores.entries()) {
+    const fileNode = aggregates.get(analysisPath);
+
+    if (fileNode) {
+      for (const [ownerKey, ownerScore] of ownerScores.entries()) {
+        upsertOwnerScore(fileNode.ownerScores, {
+          ownerKey,
+          ownerLogin: ownerScore.ownerLogin,
+          displayName: ownerScore.displayName,
+          rawScore: ownerScore.rawScore,
+        });
+      }
+    }
+
+    for (const ancestor of getAncestors(analysisPath)) {
+      const ancestorNode = aggregates.get(ancestor);
+
+      if (!ancestorNode) {
+        continue;
       }
 
-      for (const ancestor of getAncestors(analysisPath)) {
-        const ancestorNode = aggregates.get(ancestor);
-
-        if (!ancestorNode) {
-          continue;
-        }
-
-        upsertOwnerScore(ancestorNode.ownerScores, scoreEntry);
+      for (const [ownerKey, ownerScore] of ownerScores.entries()) {
+        upsertOwnerScore(ancestorNode.ownerScores, {
+          ownerKey,
+          ownerLogin: ownerScore.ownerLogin,
+          displayName: ownerScore.displayName,
+          rawScore: ownerScore.rawScore,
+        });
       }
     }
   }

@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, useInView } from "framer-motion"
+import { motion, useInView, type Variants } from "framer-motion"
 import { useRef } from "react"
 import { GitCommit, Users, Network, TrendingDown, GitMerge } from "lucide-react"
 
@@ -11,7 +11,7 @@ const containerVariants = {
   },
 }
 
-const itemVariants: any = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
