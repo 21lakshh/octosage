@@ -34,6 +34,8 @@ export const repositorySummarySchema = z.object({
   fullName: z.string(),
   defaultBranch: z.string(),
   isPrivate: z.boolean(),
+  providerUpdatedAt: z.string().nullable(),
+  providerPushedAt: z.string().nullable(),
   lastSeenAt: z.string(),
   hasSnapshot: z.boolean(),
   lastAnalyzedAt: z.string().nullable(),

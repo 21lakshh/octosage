@@ -77,6 +77,8 @@ export interface Database {
           full_name: string;
           default_branch: string;
           is_private: boolean;
+          provider_updated_at: string | null;
+          provider_pushed_at: string | null;
           last_seen_at: string;
           created_at: string;
           updated_at: string;
@@ -91,6 +93,8 @@ export interface Database {
           full_name: string;
           default_branch: string;
           is_private: boolean;
+          provider_updated_at?: string | null;
+          provider_pushed_at?: string | null;
           last_seen_at?: string;
           created_at?: string;
           updated_at?: string;
@@ -101,6 +105,8 @@ export interface Database {
           full_name?: string;
           default_branch?: string;
           is_private?: boolean;
+          provider_updated_at?: string | null;
+          provider_pushed_at?: string | null;
           last_seen_at?: string;
           updated_at?: string;
         };
