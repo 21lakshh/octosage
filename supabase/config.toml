@@ -1,0 +1,4 @@
+project_id = "gitsage"
+
+[functions.process-analysis-job]
+verify_jwt = false
