@@ -7,8 +7,7 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint .",
-    "worker": "tsx src/worker/index.ts"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@next/env": "^16.2.0",
